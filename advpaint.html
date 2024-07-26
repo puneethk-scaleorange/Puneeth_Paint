@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paint - Untitled</title>
+    <link rel="stylesheet" href="paint.css">
+</head>
+<body>
+    <div class="menu-bar">
+        <span class="menu-item">File</span>
+        <span class="menu-item">View</span>
+    </div>
+    <div class="toolbar">
+        <div class="tool-group">
+            <div class="tool-group-label">Undo/Redo</div>
+            <div class="tool-buttons">
+                <button class="tool-button" id="undoBtn" title="Undo">↩️</button>
+                <button class="tool-button" id="redoBtn" title="Redo">↪️</button>
+            </div>
+        </div>
+        <div class="tool-group">
+            <div class="tool-group-label">Tools</div>
+            <div class="tool-buttons">
+                <button class="tool-button active" id="brushBtn" title="Brush">🖌️</button>
+                <button class="tool-button" id="eraserBtn" title="Eraser">🧽</button>
+                <button class="tool-button" id="fillBtn" title="Fill">🪣</button>
+            </div>
+        </div>
+        <div class="tool-group">
+            <div class="tool-group-label">Shapes</div>
+            <div class="tool-buttons">
+                <button class="tool-button" id="lineBtn" title="Line">➖</button>
+                <button class="tool-button" id="rectBtn" title="Rectangle">□</button>
+                <button class="tool-button" id="circleBtn" title="Circle">○</button>
+            </div>
+        </div>
+        <div class="tool-group">
+            <div class="tool-group-label">Size</div>
+            <input type="range" id="penSize" min="1" max="50" value="5" title="Pen Size">
+        </div>
+        <div class="tool-group">
+            <div class="tool-group-label">Colors</div>
+            <div class="color-palette" id="colorPalette"></div>
+            <input type="color" id="colorPicker" class="color-picker" title="Pick a color">
+        </div>
+        <div class="tool-group">
+            <div class="tool-buttons">
+                <button class="tool-button" id="clearBtn" title="Clear">🗑️</button>
+                <button class="tool-button" id="saveBtn" title="Save">💾</button>
+            </div>
+        </div>
+    </div>
+    <div class="canvas-container">
+        <canvas id="canvas" width="1400" height="900"></canvas>
+    </div>
+   
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const tempCanvas = document.createElement('canvas');
+        const tempContext = tempCanvas.getContext('2d');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const penSize = document.getElementById('penSize');
+        const colorPalette = document.getElementById('colorPalette');
+        const colorPicker = document.getElementById('colorPicker');
+        const canvasInfo = document.getElementById('canvasInfo');
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const saveBtn = document.getElementById('saveBtn');
+
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let startX, startY;
+        let currentColor = '#000000';
+        let currentTool = 'brush';
+
+        const history = [];
+        let historyIndex = -1;
+
+        const colors = [
+            '#000000', '#808080', '#800000', '#808000', '#008000', '#008080', '#000080', '#800080',
+            '#c0c0c0', '#ff0000', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff', '#ffffff'
+        ];
+
+        function saveState() {
+            if (historyIndex < history.length - 1) {
+                history.splice(historyIndex + 1);
+            }
+            history.push(canvas.toDataURL());
+            historyIndex = history.length - 1;
+            saveToLocalStorage();
+        }
+
+        function restoreState(index) {
+            if (index >= 0 && index < history.length) {
+                const img = new Image();
+                img.onload = () => {
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.drawImage(img, 0, 0);
+                };
+                img.src = history[index];
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('canvasData', canvas.toDataURL());
+        }
+
+        function loadFromLocalStorage() {
+            const dataURL = localStorage.getItem('canvasData');
+            if (dataURL) {
+                const img = new Image();
+                img.onload = () => {
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.drawImage(img, 0, 0);
+                    saveState(); // Ensure the loaded image is also saved in history
+                };
+                img.src = dataURL;
+            }
+        }
+
+        colors.forEach(color => {
+            const colorOption = document.createElement('div');
+            colorOption.className = 'color-option';
+            colorOption.style.backgroundColor = color;
+            colorOption.addEventListener('click', () => {
+                currentColor = color;
+                document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+                colorOption.classList.add('selected');
+                colorPicker.value = color;
+            });
+            colorPalette.appendChild(colorOption);
+        });
+
+        colorPicker.addEventListener('input', (e) => {
+            currentColor = e.target.value;
+            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+        });
+
+        function startPosition(e) {
+            isDrawing = true;
+            [startX, startY] = [e.offsetX, e.offsetY];
+            [lastX, lastY] = [startX, startY];
+            
+            if (['line', 'rect', 'circle'].includes(currentTool)) {
+                tempContext.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                tempContext.drawImage(canvas, 0, 0);
+            }
+        }
+
+        function endPosition() {
+            if (isDrawing) {
+                if (['line', 'rect', 'circle'].includes(currentTool)) {
+                    context.drawImage(tempCanvas, 0, 0);
+                }
+                saveState();
+            }
+            isDrawing = false;
+            context.beginPath();
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            context.strokeStyle = currentTool === 'eraser' ? '#FFFFFF' : currentColor;
+            context.lineWidth = penSize.value;
+            context.lineCap = 'round';
+
+            if (currentTool === 'brush' || currentTool === 'eraser') {
+                context.beginPath();
+                context.moveTo(lastX, lastY);
+                context.lineTo(e.offsetX, e.offsetY);
+                context.stroke();
+                [lastX, lastY] = [e.offsetX, e.offsetY];
+            } else if (['line', 'rect', 'circle'].includes(currentTool)) {
+                drawShape(e);
+            }
+        }
+
+        function drawShape(e) {
+            tempContext.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tempContext.drawImage(canvas, 0, 0);
+            
+            tempContext.strokeStyle = currentColor;
+            tempContext.lineWidth = penSize.value;
+            tempContext.lineCap = 'round';
+
+            if (currentTool === 'line') {
+                tempContext.beginPath();
+                tempContext.moveTo(startX, startY);
+                tempContext.lineTo(e.offsetX, e.offsetY);
+                tempContext.stroke();
+            } else if (currentTool === 'rect') {
+                const width = e.offsetX - startX;
+                const height = e.offsetY - startY;
+                tempContext.beginPath();
+                tempContext.rect(startX, startY, width, height);
+                tempContext.stroke();
+            } else if (currentTool === 'circle') {
+                const radius = Math.sqrt(Math.pow(e.offsetX - startX, 2) + Math.pow(e.offsetY - startY, 2));
+                tempContext.beginPath();
+                tempContext.arc(startX, startY, radius, 0, Math.PI * 2);
+                tempContext.stroke();
+            }
+
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(tempCanvas, 0, 0);
+        }
+
+        function floodFill(x, y, color) {
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const targetColor = getPixelColor(imageData, x, y);
+            const newColor = hexToRgb(color);
+
+            if (colorMatch(targetColor, newColor)) return;
+
+            const pixelsToCheck = [[x, y]];
+
+            while (pixelsToCheck.length) {
+                const [x, y] = pixelsToCheck.pop();
+                if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+                    const pixelColor = getPixelColor(imageData, x, y);
+                    if (colorMatch(pixelColor, targetColor)) {
+                        setPixelColor(imageData, x, y, newColor);
+                        pixelsToCheck.push([x + 1, y]);
+                        pixelsToCheck.push([x - 1, y]);
+                        pixelsToCheck.push([x, y + 1]);
+                        pixelsToCheck.push([x, y - 1]);
+                    }
+                }
+            }
+
+            context.putImageData(imageData, 0, 0);
+        }
+
+        function getPixelColor(imageData, x, y) {
+            const index = (y * imageData.width + x) * 4;
+            return {
+                r: imageData.data[index],
+                g: imageData.data[index + 1],
+                b: imageData.data[index + 2],
+                a: imageData.data[index + 3]
+            };
+        }
+
+        function setPixelColor(imageData, x, y, color) {
+            const index = (y * imageData.width + x) * 4;
+            imageData.data[index] = color.r;
+            imageData.data[index + 1] = color.g;
+            imageData.data[index + 2] = color.b;
+            imageData.data[index + 3] = 255;
+        }
+
+        function colorMatch(color1, color2) {
+            return color1.r === color2.r && color1.g === color2.g && color1.b === color2.b;
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (currentTool === 'fill') {
+                floodFill(e.offsetX, e.offsetY, currentColor);
+                saveState();
+            } else {
+                startPosition(e);
+            }
+        });
+
+        canvas.addEventListener('mouseup', endPosition);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseout', endPosition);
+
+        undoBtn.addEventListener('click', () => {
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreState(historyIndex);
+            }
+        });
+
+        redoBtn.addEventListener('click', () => {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                restoreState(historyIndex);
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            history.length = 0;
+            historyIndex = -1;
+            saveToLocalStorage();
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL();
+            link.download = 'drawing.png';
+            link.click();
+        });
+
+        document.querySelectorAll('.tool-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentTool = btn.id.replace('Btn', '');
+                document.querySelectorAll('.tool-button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        
+        window.onload = loadFromLocalStorage;
+    </script>
+</body>
+</html>
