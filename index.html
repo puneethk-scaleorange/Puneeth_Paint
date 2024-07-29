@@ -50,6 +50,21 @@
                 <button class="tool-button" id="saveBtn" title="Save">💾</button>
             </div>
         </div>
+        <div class="connect">
+        <div class="section_color_palette">
+            <div class="color_palette"></div>
+            Edit <br>Colors
+        </div>
+        
+        <div class="section_paintwithcolors">
+            <div class="box">
+                <div class="gradient-droplet"></div>
+            </div>
+            <br>
+            
+            Edit with<br>Paint 3D
+        </div>
+        </div>
     </div>
     <div class="canvas-container">
         <canvas id="canvas" width="1400" height="900"></canvas>
@@ -212,70 +227,12 @@
             context.drawImage(tempCanvas, 0, 0);
         }
 
-        function floodFill(x, y, color) {
-            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-            const targetColor = getPixelColor(imageData, x, y);
-            const newColor = hexToRgb(color);
-
-            if (colorMatch(targetColor, newColor)) return;
-
-            const pixelsToCheck = [[x, y]];
-
-            while (pixelsToCheck.length) {
-                const [x, y] = pixelsToCheck.pop();
-                if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
-                    const pixelColor = getPixelColor(imageData, x, y);
-                    if (colorMatch(pixelColor, targetColor)) {
-                        setPixelColor(imageData, x, y, newColor);
-                        pixelsToCheck.push([x + 1, y]);
-                        pixelsToCheck.push([x - 1, y]);
-                        pixelsToCheck.push([x, y + 1]);
-                        pixelsToCheck.push([x, y - 1]);
-                    }
-                }
-            }
-
-            context.putImageData(imageData, 0, 0);
-        }
-
-        function getPixelColor(imageData, x, y) {
-            const index = (y * imageData.width + x) * 4;
-            return {
-                r: imageData.data[index],
-                g: imageData.data[index + 1],
-                b: imageData.data[index + 2],
-                a: imageData.data[index + 3]
-            };
-        }
-
-        function setPixelColor(imageData, x, y, color) {
-            const index = (y * imageData.width + x) * 4;
-            imageData.data[index] = color.r;
-            imageData.data[index + 1] = color.g;
-            imageData.data[index + 2] = color.b;
-            imageData.data[index + 3] = 255;
-        }
-
-        function colorMatch(color1, color2) {
-            return color1.r === color2.r && color1.g === color2.g && color1.b === color2.b;
-        }
-
-        function hexToRgb(hex) {
-            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? {
-                r: parseInt(result[1], 16),
-                g: parseInt(result[2], 16),
-                b: parseInt(result[3], 16)
-            } : null;
-        }
+    
 
         canvas.addEventListener('mousedown', (e) => {
-            if (currentTool === 'fill') {
-                floodFill(e.offsetX, e.offsetY, currentColor);
-                saveState();
-            } else {
+           
                 startPosition(e);
-            }
+           
         });
 
         canvas.addEventListener('mouseup', endPosition);
