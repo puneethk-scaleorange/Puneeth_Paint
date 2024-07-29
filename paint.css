@@ -9,7 +9,12 @@ body, html {
     flex-direction: column;
 }
 
-
+.section_color_palette{
+    margin-left:20px;
+}
+.section_paintwithcolors{
+    margin-left:20px;
+}
 .menu-bar {
     background-color: #f0f0f0;
     padding: 5px 10px;
@@ -21,7 +26,31 @@ body, html {
     margin-right: 15px;
     cursor: pointer;
 }
+.color_palette {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(to right, red, orange, yellow, green, cyan, blue, violet), linear-gradient(to top, #000, transparent);
+    background-blend-mode: multiply;
+    border: 2px solid #ccc;
+    }
+.box {
+    width: 30px; 
+    height: 20px; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+    margin-left:10px; 
+}
 
+.gradient-droplet {
+    width: 20px;
+    height: 35px;
+    background: linear-gradient(120deg, yellow, pink, purple, cyan, blue);
+    clip-path: path('M 10 0 C 15 0, 20 5, 20 10 C 20 15, 10 30, 10 30 C 10 30, 0 15, 0 10 C 0 5, 5 0, 10 0');
+    margin-top:30px;
+    
+}
 
 .toolbar {
     background-color: #f0f0f0;
@@ -122,6 +151,7 @@ body, html {
 
 
 @media (max-width: 768px) {
+    
     .toolbar {
         flex-direction: column;
         align-items: stretch;
@@ -152,3 +182,15 @@ body, html {
         justify-content: center;
     }
 }
+.connect
+{
+    display:flex;
+    justify-content: center;
+    flex-direction: row;
+    align-content: center;
+   
+    border: 1px solid #d0d0d0;
+    ;
+    margin-right:30px;
+}
+   
